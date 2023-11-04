@@ -1,0 +1,82 @@
+CREATE TABLE dim_customers (
+    customer_id INT PRIMARY KEY,
+    customer_name VARCHAR(255),
+    customer_email VARCHAR(255),
+    customer_address VARCHAR(255),
+    customer_phone VARCHAR(20)
+);
+
+
+CREATE TABLE dim_products (
+    product_id INT PRIMARY KEY,
+    product_name VARCHAR(255),
+    category VARCHAR(50),
+    price DECIMAL(10, 2),
+    manufacturer VARCHAR(100)
+);
+
+CREATE TABLE dim_time (
+    date_id INT PRIMARY KEY,
+    date DATE,
+    day_of_week VARCHAR(10),
+    month VARCHAR(10),
+    quarter VARCHAR(10),
+    year INT
+);
+
+CREATE TABLE dim_regions (
+    region_id INT PRIMARY KEY,
+    region_name VARCHAR(50),
+    country VARCHAR(50),
+    state VARCHAR(50),
+    city VARCHAR(50)
+);
+
+CREATE TABLE fact_sales (
+    sales_id INT PRIMARY KEY,
+    customer_id INT,
+    product_id INT,
+    date_id INT,
+    region_id INT,
+    quantity_sold INT,
+    revenue DECIMAL(12, 2),
+    FOREIGN KEY (customer_id) REFERENCES dim_customers (customer_id),
+    FOREIGN KEY (product_id) REFERENCES dim_products (product_id),
+    FOREIGN KEY (date_id) REFERENCES dim_time (date_id),
+    FOREIGN KEY (region_id) REFERENCES dim_regions (region_id)
+);
+
+
+slice 
+SELECT * FROM fact_sales
+WHERE region_id IN (SELECT region_id FROM dim_regions WHERE region_name = 'West')
+  AND date_id IN (SELECT date_id FROM dim_time WHERE year = 2023);
+
+
+dice 
+
+SELECT * FROM fact_sales
+WHERE product_id IN (SELECT product_id FROM dim_products WHERE category = 'Electronics')
+  AND region_id IN (SELECT region_id FROM dim_regions WHERE region_name = 'South')
+  AND date_id IN (SELECT date_id FROM dim_time WHERE year = 2023);
+
+
+roll
+
+SELECT dp.category, SUM(fs.revenue) as total_revenue
+FROM fact_sales fs
+JOIN dim_products dp ON fs.product_id = dp.product_id
+JOIN dim_time dt ON fs.date_id = dt.date_id
+WHERE dt.year = 2023
+GROUP BY dp.category;
+  
+
+pivot
+SELECT dp.category,
+       SUM(CASE WHEN dt.year = 2023 THEN fs.revenue ELSE 0 END) AS revenue_2023,
+       SUM(CASE WHEN dt.year = 2022 THEN fs.revenue ELSE 0 END) AS revenue_2022
+FROM fact_sales fs
+JOIN dim_products dp ON fs.product_id = dp.product_id
+JOIN dim_time dt ON fs.date_id = dt.date_id
+GROUP BY dp.category;
+
